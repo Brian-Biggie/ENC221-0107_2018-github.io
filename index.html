@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Map Application</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Map Application</h1>
+
+  <div>
+    <input type="text" id="searchInput" placeholder="Search...">
+    <button onclick="search()">Search</button>
+  </div>
+
+  <div>
+    <h2>Filters</h2>
+    <label>
+      <input type="radio" name="mapFilter" value="openstreetmap" onclick="changeMapLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')" checked> Filter 1 (OpenStreetMap)
+    </label>
+    <label>
+      <input type="radio" name="mapFilter" value="terrain" onclick="changeMapLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png')"> Filter 2 (Terrain)
+    </label>
+    <label>
+      <input type="radio" name="mapFilter" value="heatmap" onclick="changeHeatmapLayer()"> Filter 3 (Heatmap)
+    </label>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet/dist/leaflet.js"></script>
+  <script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"></script>
+  <script>
+    const map = L.map('map').setView([0, 0], 2);
+    let marker;
+    let currentTileLayer;
+    let heatmapLayer;
+
+    // Initial tile layer (OpenStreetMap)
+    const initialTileLayerUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    currentTileLayer = L.tileLayer(initialTileLayerUrl, {
+      attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    function search() {
+      const searchInput = document.getElementById('searchInput').value;
+
+      // Use a third-party geocoding service (e.g., OpenStreetMap Nominatim) to get the city's latitude and longitude
+      const geocodingUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchInput)}&format=json`;
+
+      fetch(geocodingUrl)
+        .then(response => response.json())
+        .then(data => {
+          if (data.length > 0) {
+            const { lat, lon, display_name } = data[0];
+            const cityName = display_name.split(",")[0];
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lon);
+
+            if (marker) {
+              marker.removeFrom(map);
+            }
+
+            marker = L.marker([latitude, longitude]).addTo(map);
+            marker.bindPopup(cityName).openPopup();
+
+            map.setView([latitude, longitude], 10);
+          } else {
+            alert('City not found. Please enter a valid city name.');
+          }
+        })
+        .catch(error => {
+          console.error('Error loading city data:', error);
+        });
+    }
+
+    function changeMapLayer(tileLayerUrl) {
+      if (currentTileLayer) {
+        currentTileLayer.removeFrom(map);
+      }
+
+      currentTileLayer = L.tileLayer(tileLayerUrl, {
+        attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+      }).addTo(map);
+    }
+
+    function changeHeatmapLayer() {
+      if (heatmapLayer) {
+        heatmapLayer.remove();
+      }
+
+      // Sample heatmap data
+      const heatmapData = [
+  [40.7128, -74.0060, 0.5], // New York
+  [34.0522, -118.2437, 0.8], // Los Angeles
+  [41.8781, -87.6298, 0.7], // Chicago
+  [29.7604, -95.3698, 1.0], // Houston
+  [37.7749, -122.4194, 0.9], // San Francisco
+  [25.7461, 28.1881, 0.6], // South Africa
+  [34.6937, 135.5023, 0.4], // Osaka
+  [55.7558, 37.6176, 0.7], // Moscow
+  [51.5074, -0.1278, 0.8], // London
+  [-33.8688, 151.2093, 1.0], // Sydney
+  [28.6139, 77.2090, 0.9], // Delhi
+  [-23.5505, -46.6333, 0.5] // Sao Paulo
+  // Add more data points here if needed
+];
+
+
+      heatmapLayer = L.heatLayer(heatmapData, {
+        radius: 25,
+        blur: 15,
+        maxZoom: 10
+      }).addTo(map);
+    }
+  </script>
+</body>
+</html>
